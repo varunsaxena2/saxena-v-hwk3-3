@@ -1,0 +1,108 @@
+---
+title: "Homework 3"
+author: "Varun Saxena"
+format:
+  pdf:
+    output-file: "saxena-v-hwk3-3"
+    output-ext:  "pdf"
+    header-includes:
+      - \usepackage{float}
+      - \floatplacement{table}{H}
+
+---
+```{r}
+#| echo: false
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, ggplot2, dplyr, lubridate, stringr, readxl, data.table, gdata, here, kableExtra)
+library(knitr)
+load("Hwk3_workspace.Rdata")
+```
+
+\newpage
+Repository
+https://github.com/varunsaxena2/saxena-v-hwk3-3
+\newpage
+\noindent 1. Here is the bar graph showing the proportion of states with a change in their cigarette tax in each year from 1970 to 1985.
+
+```{r}
+#| echo: false
+q1plot
+```
+\newpage
+\noindent 2. Here is the line graph showing the average tax (in 2012 dollars) on cigarettes and the average price of a pack of cigarettes from 1970 to 2018.
+``` {r}
+#| echo: false
+q2plot
+```
+\newpage
+\noindent 3. 
+
+The 5 states with the highest increases in cigarette prices (in dollars) over the time period are `r high.change$state`.
+
+``` {r}
+#| echo: false
+q3fig
+```
+
+\newpage
+\noindent 4.
+The 5 states with the lowest increases in cigarette prices (in dollars) over the time period are `r low.change$state`.
+```{r}
+#| echo: false
+
+q4fig
+```
+
+\newpage
+\noindent 5. This plot displays the previous two graphs overlayed ontop of one another. The five highest price states is in red and the five lowest price states is in black.
+```{r}
+#| echo: false
+
+q5fig
+```
+From this, we can gather that cigarettes follow normal economic trends, with higher taxes correlating with lower sales due to a price increase. Initially this trend is flipped, but over time, the gap in sales per capita grows, indicating consumer sensitivity to price changes.
+
+\newpage 
+\noindent 6. 
+This model regresses ln(sales) on ln(price).
+```{r}
+#| echo: false
+kable(model1t)
+```
+The negative coefficient indicates that increases in price correlate with decreases in sales, indicating elastic demand.
+
+\newpage 
+\noindent 7. This instrumental variable regression regresses ln(sales) on ln(price) with ln(tax) serving as the instrumental variable.
+```{r}
+#| echo: false
+
+kable(model2t)
+```
+The results of the study indicate that when tax is used as an instrumental variable to reduce endogeneity effects, the result is the same as the previous model, with a negative association between sales and price.
+
+\newpage
+\noindent 8. This model regresses ln(sales) on ln(tax). This represents the reduced-form result of the instrument. The first stage result of the instrument is shown in question 7.
+
+```{r}
+#| echo: false
+
+kable(model3t)
+```
+The negative estimator coefficient indicates that an increase in tax is associated with a decrease in sales, indicating the presence of price elasticity of demand.
+
+\newpage
+\noindent 9.
+These three models regress ln(sales) on ln(price), ln(price) with ln(tax) as an IV, and ln(tax), respectively.
+```{r}
+#| echo: false
+
+kable(model4t)
+kable(model5t)
+kable(model6t)
+
+```
+
+
+\newpage
+\noindent 10. 
+The result of these regressions are that the price elasticity of demand is greater in magnitude across all three regressions as indicated by the estimator coefficient. This would indicate that in more recent years, consumers are more sensitive to price and tax changes. A potential reason for this increased sensitivity to price changes is that there are more alternatives to cigarettes, with e-cigarettes and other such products. The addictive nature of cigarettes would render it an inelastic good, but the presence of alternative goods makes this good more elastic to price changes.

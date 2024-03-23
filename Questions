@@ -1,0 +1,106 @@
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, ggplot2, dplyr, lubridate, stringr, readxl, data.table, gdata)
+install.packages("fixest")
+library(fixest)
+library(gridExtra)
+install.packages("broom")
+library(broom)
+cig.data <- readRDS('data/output/TaxBurden_Data.rds')
+
+cig.data <- cig.data %>% group_by(state) %>% arrange(state, Year) %>%
+    mutate(tax_change = tax_state - lag(tax_state),
+        tax_change_d = ifelse(tax_change==0,0,1),
+        price_cpi_2012 = cost_per_pack*(price_cpi/index),
+        total_tax_cpi_2012 = tax_dollar*(price_cpi/index),
+        ln_tax_2012 = log(total_tax_cpi_2012),
+        ln_sales = log(sales_per_capita),
+        ln_price_2012 = log(price_cpi_2012))
+
+q1plot <- cig.data %>%
+group_by(Year) %>% filter(Year<1986, Year>1970) %>%
+  summarize(mean_change=mean(tax_change_d)) %>%
+  ggplot(aes(x = as.factor(Year), y = mean_change)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Proportion of States with Change in Cigarette Tax (1970-1985)",
+       x = "Year",
+       y = "Proportion of States with Change") +
+  theme_minimal()
+
+q2plot <- cig.data %>%
+  group_by(Year) %>% filter(Year<2018, Year>1970) %>%
+  summarize(mean_tax=mean(total_tax_cpi_2012), mean_cpi=mean(price_cpi_2012)) %>%
+  ggplot(aes(x=Year)) +
+    geom_line(aes(y =mean_tax, color = "Average Tax"), size = 1.2) +
+    geom_line(aes(y = mean_cpi, color = "Average Price"), size = 1.2) +
+    scale_color_manual(values = c("Average Tax" = "blue", "Average Price" = "red")) +
+    labs(title = "Average Tax and Price of Cigarettes (1970-2018)",
+         x = "Year",
+         y = "Amount (in 2012 dollars)",
+         color = "Variable") +
+   theme_minimal()
+
+cig.data.change <- cig.data %>%
+  ungroup() %>%
+  filter(Year == 1970) %>%
+  select(state, p1 = price_cpi_2012) %>%
+  left_join(cig.data %>% 
+              filter(Year == 2018) %>% 
+              select(state, p2 = price_cpi_2012),
+            by = "state") %>%
+  mutate(price_change = p2 - p1)
+
+high.change <- cig.data.change %>% slice_max(price_change, n=5) %>% mutate(change_group="high")
+low.change <- cig.data.change %>% slice_min(price_change, n=5) %>% mutate(change_group="low")
+change.group <- rbind(high.change, low.change)
+
+top.bottom.price <- cig.data %>% ungroup %>%
+  inner_join(change.group %>% select(state, change_group), relationship = "many-to-many",
+  by=("state"))
+
+q3data <- top.bottom.price %>% 
+  filter(change_group=="high") %>%
+  group_by(Year) %>%  
+  summarize(mean_sales = mean(sales_per_capita, na.rm = TRUE))
+
+q3fig <- q3data %>% 
+  ggplot(aes(x = Year, y = mean_sales)) +
+  geom_line() + 
+  labs(x = "Year", y = "Mean Sales per Capita", color="State") + 
+  theme_bw()
+
+q4fig <- top.bottom.price %>% 
+  filter(change_group=="low") %>%
+  group_by(Year) %>%  
+  summarize(mean_sales = mean(sales_per_capita, na.rm = TRUE)) %>%  
+  ggplot(aes(x = Year, y = mean_sales)) +
+  geom_line() + 
+  labs(x = "Year", y = "Mean Sales per Capita", color="State") + 
+  theme_bw()
+
+q5fig <- q4fig + 
+  geom_line(data = q3data, aes(x = Year, y = mean_sales), color = "red")
+
+rcig.data <- na.omit(cig.data)
+restricted_cig.data <- subset(rcig.data, Year >= 1970 & Year <= 1990)
+
+model1 <- lm(ln_sales ~ ln_price_2012, data = restricted_cig.data)
+model1t <- tidy(model1)
+
+model2 <- feols(ln_sales ~ 1 | ln_price_2012 ~ ln_tax_2012, data = restricted_cig.data)
+model2t <- tidy(model2)
+
+model3 <- lm(ln_sales ~ ln_tax_2012, data = restricted_cig.data)
+model3t <- tidy(model3)
+
+recent_cig.data <- subset(rcig.data, Year >= 1991 & Year <= 2015)
+
+model4 <- lm(ln_sales ~ ln_price_2012, data = recent_cig.data)
+model4t <- tidy(model4)
+
+model5 <- feols(ln_sales ~ 1 | ln_price_2012 ~ ln_tax_2012, data = recent_cig.data)
+model5t <- tidy(model5)
+
+model6 <- lm(ln_sales ~ ln_tax_2012, data = recent_cig.data)
+model6t <- tidy(model6)
+
+save.image("analysis/Hwk3_workspace.Rdata")
